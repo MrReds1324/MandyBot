@@ -206,10 +206,10 @@ async def bot_name(ctx, user_to_show):
         try:
             user_id = strip_user_id(user_to_show)
         except:
-            await ctx.send("You love yourself?")
+            await ctx.send("You love yourself <3")
             return
     else:
-        await ctx.send("You love yourself?")
+        await ctx.send("You love yourself <3")
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases:
         love_phrases = guild_phrases.get('_love_phrases')
