@@ -2,21 +2,19 @@
 import os
 import requests
 import random
+import logging
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from discord.ext import commands
 from discord import Embed, HTTPException
 
-import logging
-
+load_dotenv()
 logger = logging.getLogger('discord')
-logger.setLevel(logging.ERROR)
+logger.setLevel(os.getenv('LOGGING_LEVEL'))
 handler = logging.FileHandler(filename='err.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
-
-load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 client = MongoClient(os.getenv('MONGODB_URL'))
 db = client.mandybot
