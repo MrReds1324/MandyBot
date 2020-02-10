@@ -249,7 +249,7 @@ async def remove_love_phrase(ctx, phrase_to_remove):
 
 
 @bot.command(name='show_love_phrases', help='Show this server\'s love phrases')
-async def show_phrases(ctx):
+async def show_love_phrases(ctx):
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_love_phrases'):
         string_list = format_list_to_printable_lists(guild_phrases.get('_love_phrases'))
