@@ -10,7 +10,7 @@ Custom Discord bot mainly for tracking user statistics
 ## Setup
 Install and run mongodb and verify that the mongo service will run on restart. The bot uses the default admin credentials for mongo to make configuration and launching the bot as easy as possible.
 
-Create a file called .env and add the following default information to it:
+Create a file called .env in the same location as the bot.py and create_db.py scripts and add the following default information to it:
 
 ```
 # .env
