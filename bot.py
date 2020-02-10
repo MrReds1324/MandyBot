@@ -1,0 +1,276 @@
+# bot.py
+import os
+import requests
+from dotenv import load_dotenv
+from pymongo import MongoClient
+from discord.ext import commands
+from discord import Embed, HTTPException
+
+import logging
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='err.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
+
+
+load_dotenv()
+token = os.getenv('DISCORD_TOKEN')
+client = MongoClient(os.getenv('MONGODB_URL'))
+db = client.mandybot
+
+command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
+                'message_count']
+prefixes = db.guildstats.find_one({'_name': '_mandybot_prefixes'}).get('_mandybot_prefixes')
+
+
+def find_prefix(bot, message):
+    server_id = str(message.guild.id)
+    return prefixes.get(server_id, '*')
+
+
+bot = commands.Bot(command_prefix=find_prefix)
+
+
+@bot.event
+async def on_ready():
+    print(f'{bot.user.name} has connected to Discord!')
+
+
+@bot.event
+async def on_message(message):
+    # Dont track the bots messages or let the bot issue commands
+    if message.author == bot.user:
+        return
+
+    # Dont track words/phrases used during a command
+    for command in command_list:
+        if message.content.startswith(find_prefix(None, message) + command):
+            await bot.process_commands(message)
+            return
+    # Process messages if not a command or said by the bot
+    user_stats = db.userstats.find_one({'_discord_user_id': message.author.id})
+    if user_stats:
+        process_message(user_stats, message)
+    else:
+        process_message({'_discord_user_id': message.author.id}, message, True)
+
+
+@bot.command(name='add_phrase', help='Add a phrase to be tracked by the bot - Usage *add_phrase "add this whole thing"')
+async def add_phrase(ctx, phrase_to_add):
+    phrase_to_add = phrase_to_add.lower()
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases:
+        if phrase_to_add not in guild_phrases.get('_tracked_phrases'):
+            db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$push': {'_tracked_phrases': phrase_to_add}})
+        else:
+            await ctx.send("The phrase \"{}\" is already being tracked!".format(phrase_to_add))
+            return
+    else:
+        db.guildstats.insert_one({'_discord_guild_id': ctx.guild.id, '_tracked_phrases': [phrase_to_add]})
+    await ctx.send("Added: \"{}\" to the server's tracked phrases!".format(phrase_to_add))
+
+
+@bot.command(name='remove_phrase', help='Remove a phrase tracked by the bot - Usage *remove_phrase "remove this whole thing"')
+async def remove_phrase(ctx, phrase_to_remove):
+    phrase_to_remove = phrase_to_remove.lower()
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
+        db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_tracked_phrases': phrase_to_remove}})
+        await ctx.send("Removed: \"{}\" from the server's tracked phrases!".format(phrase_to_remove))
+    else:
+        await ctx.send("This server has no phrase \"{}\" to remove!".format(phrase_to_remove))
+
+
+@bot.command(name='show_phrases', help='Show this server\'s tracked phrases')
+async def show_phrases(ctx):
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases and guild_phrases.get('_tracked_phrases'):
+        string_list = format_list_to_printable_lists(guild_phrases.get('_tracked_phrases'))
+        for item in string_list:
+            await ctx.send(item)
+    else:
+        await ctx.send("This server has no tracked phrases!")
+
+
+@bot.command(name='phrase_count', help='Show users phrase usage, both arguments are optional - Usage *phrase_count @user "phrase to show"')
+async def phrase_count(ctx, user_to_show=None, phrase_to_show=None):
+    guild_id = str(ctx.message.guild.id)
+    if user_to_show:
+        try:
+            user_id = strip_user_id(user_to_show)
+        except:
+            await ctx.send("Please tag a proper person for the first argument to show their phrase count.")
+            return
+    else:
+        user_id = ctx.message.author.id
+    user_stats = db.userstats.find_one({'_discord_user_id': user_id})
+    if user_stats:
+        await ctx.send('{} has said:'.format(ctx.message.guild.get_member(user_id).name))
+        phrases = user_stats.get(guild_id).get('_phrase_count')
+        if phrase_to_show:
+            await ctx.send(phrase_to_show + ': ' + str(phrases.get(phrase_to_show, 0)))
+        else:
+            for string_item in format_dict_to_string(phrases):
+                await ctx.send(string_item)
+    else:
+        await ctx.send('This user has yet to say anything in this server')
+
+
+@bot.command(name='word_count', help='Show users word usage, both arguments are optional - Usage *phrase_count @user "phrase to show"')
+async def word_count(ctx, user_to_show=None, word_to_show=None):
+    guild_id = str(ctx.message.guild.id)
+    if user_to_show:
+        try:
+            user_id = strip_user_id(user_to_show)
+        except:
+            await ctx.send("Please tag a proper person for the first argument to show their word count.")
+            return
+    else:
+        user_id = ctx.message.author.id
+    user_stats = db.userstats.find_one({'_discord_user_id': user_id})
+    if user_stats:
+        await ctx.send('{} has said:'.format(ctx.message.guild.get_member(user_id).name))
+        words = user_stats.get(guild_id).get('_word_count')
+        if word_to_show:
+            await ctx.send(word_to_show + ': ' + str(words.get(word_to_show, 0)))
+        else:
+            for string_item in format_dict_to_string(words):
+                await ctx.send(string_item)
+    else:
+        await ctx.send('This user has yet to say anything in this server')
+
+
+@bot.command(name='update_prefix', help='Change the prefix of the bot')
+async def update_prefix(ctx, new_prefix):
+    db.guildstats.update_one({'_name': '_mandybot_prefixes'}, {'$set': {'_mandybot_prefixes.' + str(ctx.guild.id): new_prefix}})
+    prefixes[str(ctx.guild.id)] = new_prefix
+    await ctx.send("Prefix updated to {}".format(new_prefix))
+
+
+@bot.command(name='show_pfp', help='Show the users pfp')
+async def show_pfp(ctx, user_to_show=None):
+    if user_to_show:
+        try:
+            user_id = strip_user_id(user_to_show)
+        except:
+            await ctx.send("Please tag a proper person to show their profile picture.")
+            return
+    else:
+        user_id = ctx.message.author.id
+    user = ctx.message.guild.get_member(user_id)
+    if not user:
+        return  # Can't find the user, then quit
+    pfp = user.avatar_url
+    embed = Embed(title="Profile Picture", description='{}\'s profile picture!'.format(user.mention), color=0xecce8b)
+    embed.set_image(url=pfp)
+    await ctx.send(embed=embed)
+
+
+@bot.command(name='bot_name', help='Set the nickname of the bot')
+async def bot_name(ctx, new_name):
+    await ctx.message.guild.me.edit(nick=new_name)
+
+
+@bot.command(name='bot_pfp', help='Set the avatar of the bot')
+async def bot_name(ctx, image_url):
+    response = requests.get(image_url)
+    image_bytes = response.content
+    await bot.user.edit(avatar=image_bytes)
+
+
+@bot.command(name='message_count', help='Shows the total number of messages sent for a user')
+async def bot_name(ctx, user_to_show=None):
+    guild_id = str(ctx.message.guild.id)
+    if user_to_show:
+        try:
+            user_id = strip_user_id(user_to_show)
+        except:
+            await ctx.send("Please tag a proper person for the first argument to show their word count.")
+            return
+    else:
+        user_id = ctx.message.author.id
+    user_stats = db.userstats.find_one({'_discord_user_id': user_id})
+    if user_stats:
+        messages = user_stats.get(guild_id).get('_message_count')
+        await ctx.send('{} has sent {} messages in this server!'.format(ctx.message.guild.get_member(user_id).name, messages))
+    else:
+        await ctx.send('This user has sent 0 messages in this server')
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.errors.CheckFailure):
+        await ctx.send('You do not have the correct role for this command.')
+    elif isinstance(error, HTTPException):
+        ctx.send('You are changing the profile picture too quickly, please wait and try again!')
+    else:
+        await ctx.send('An error occurred! Please try again')
+        logger.error('{}: MESSAGE: {}'.format(error, ctx.message.content))
+
+
+def process_message(user_stats, message, insert=False):
+    if not message.content:
+        return
+    content = message.content.lower()
+    message_items = content.split()
+    guild_id = str(message.guild.id)
+    count_dict = {guild_id + '._message_count': 1}
+    for item in message_items:
+        # Check for words that start with special mongodb characters and remove them
+        if item.startswith('.') or item.startswith('$'):
+            item = item[1:]
+        if count_dict.get(item):
+            count_dict[guild_id + '._word_count.' + item] = int(count_dict.get(guild_id + '._word_count.' + item)) + 1
+        else:
+            count_dict[guild_id + '._word_count.' + item] = 1
+
+    phrases = db.guildstats.find_one({'_discord_guild_id': message.guild.id})
+    if phrases:
+        phrases = phrases.get('_tracked_phrases')
+    else:
+        phrases = []
+
+    for phrase in phrases:
+        if phrase == '_discord_guild_id':
+            continue
+        phrases_count = content.count(phrase)
+        count_dict[guild_id + '._phrase_count.' + phrase] = phrases_count
+
+    if insert:
+        db.userstats.insert_one({'_discord_user_id': user_stats.get('_discord_user_id')})
+    db.userstats.update_one({'_discord_user_id': user_stats.get('_discord_user_id')}, {'$inc': count_dict})
+
+
+def format_dict_to_string(dict_to_format):
+    formatted_strings = []
+    for key in dict_to_format.keys():
+        formatted_strings.append(key + ': ' + str(dict_to_format.get(key)) + '\n')
+    return format_list_to_printable_lists(formatted_strings, '', '')
+
+
+def format_list_to_printable_lists(list_to_format, spacing=' ', separator=','):
+    # Discord only allows messages to be 2000 chars or less, organize list of items into 2000 char or less chunks
+    string_list = []
+    current_string = ""
+    for item in list_to_format:
+        if len(current_string) == 0:
+            current_string += item + separator
+        elif len(spacing + item + separator) + len(current_string) <= 2000:
+            current_string += spacing + item + separator
+        else:
+            string_list.append(current_string)
+            current_string = item + separator
+    # Strip the trailing separator
+    if separator:
+        current_string = current_string[:-1]
+    string_list.append(current_string)
+    return string_list
+
+
+def strip_user_id(mention_string):
+    return int(mention_string[3:-1])
+
+
+bot.run(token)
