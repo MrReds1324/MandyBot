@@ -22,7 +22,7 @@ client = MongoClient(os.getenv('MONGODB_URL'))
 db = client.mandybot
 
 command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
-                'message_count', 'love', 'add_love_phrase', 'remove_love_phrase']
+                'message_count', 'love', 'add_love_phrase', 'remove_love_phrase', 'show_love_phrases']
 prefixes = db.guildstats.find_one({'_name': '_mandybot_prefixes'}).get('_mandybot_prefixes')
 
 
@@ -200,7 +200,7 @@ async def bot_name(ctx, user_to_show=None):
         await ctx.send('This user has sent 0 messages in this server')
 
 
-@bot.command(name='love', help='Set the avatar of the bot')
+@bot.command(name='love', help='Show a user some love')
 async def bot_name(ctx, user_to_show):
     if user_to_show:
         try:
@@ -241,12 +241,22 @@ async def add_love_phrase(ctx, phrase_to_add):
 async def remove_love_phrase(ctx, phrase_to_remove):
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
+    if guild_phrases and phrase_to_remove not in guild_phrases.get('_love_phrases'):
         db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_love_phrases': phrase_to_remove}})
         await ctx.send("Removed: \"{}\" from the server's love phrases!".format(phrase_to_remove))
     else:
         await ctx.send("This server has no love phrase \"{}\" to remove!".format(phrase_to_remove))
 
+
+@bot.command(name='show_love_phrases', help='Show this server\'s love phrases')
+async def show_phrases(ctx):
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases and guild_phrases.get('_love_phrases'):
+        string_list = format_list_to_printable_lists(guild_phrases.get('_love_phrases'))
+        for item in string_list:
+            await ctx.send(item)
+    else:
+        await ctx.send("This server has no love phrases!")
 
 @bot.event
 async def on_command_error(ctx, error):
