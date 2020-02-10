@@ -3,6 +3,8 @@ import os
 import requests
 import random
 import logging
+
+from discord.utils import find
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from discord.ext import commands
@@ -35,6 +37,17 @@ bot = commands.Bot(command_prefix=find_prefix)
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
+
+
+@bot.event
+async def on_guild_join(guild):
+    general = find(lambda x: x.position == 0, guild.text_channels)
+    if general and general.permissions_for(guild.me).send_messages:
+        await general.send('MandyBot is a bot written for my girlfriend Mandy for valentines day 2020\n'
+                           'This bot is for sending love to everyone and tracking user usage statistics such as the amount users have said a '
+                           'phrase, and their word counts!\n'
+                           'You can add and remove love phrases to the love pool, add and remove phrases to be tracked, see phrases being tracked and see '
+                           'love phrases, as well as see users word counts and phrase counts.')
 
 
 @bot.event
