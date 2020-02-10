@@ -1,6 +1,7 @@
 # bot.py
 import os
 import requests
+import random
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from discord.ext import commands
@@ -21,7 +22,7 @@ client = MongoClient(os.getenv('MONGODB_URL'))
 db = client.mandybot
 
 command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
-                'message_count']
+                'message_count', 'love', 'add_love_phrase', 'remove_love_phrase']
 prefixes = db.guildstats.find_one({'_name': '_mandybot_prefixes'}).get('_mandybot_prefixes')
 
 
@@ -107,7 +108,7 @@ async def phrase_count(ctx, user_to_show=None, phrase_to_show=None):
         user_id = ctx.message.author.id
     user_stats = db.userstats.find_one({'_discord_user_id': user_id})
     if user_stats:
-        await ctx.send('{} has said:'.format(ctx.message.guild.get_member(user_id).name))
+        await ctx.send('{} has said:'.format(ctx.guild.get_member(user_id).name))
         phrases = user_stats.get(guild_id).get('_phrase_count')
         if phrase_to_show:
             await ctx.send(phrase_to_show + ': ' + str(phrases.get(phrase_to_show, 0)))
@@ -131,7 +132,7 @@ async def word_count(ctx, user_to_show=None, word_to_show=None):
         user_id = ctx.message.author.id
     user_stats = db.userstats.find_one({'_discord_user_id': user_id})
     if user_stats:
-        await ctx.send('{} has said:'.format(ctx.message.guild.get_member(user_id).name))
+        await ctx.send('{} has said:'.format(ctx.guild.get_member(user_id).name))
         words = user_stats.get(guild_id).get('_word_count')
         if word_to_show:
             await ctx.send(word_to_show + ': ' + str(words.get(word_to_show, 0)))
@@ -194,9 +195,57 @@ async def bot_name(ctx, user_to_show=None):
     user_stats = db.userstats.find_one({'_discord_user_id': user_id})
     if user_stats:
         messages = user_stats.get(guild_id).get('_message_count')
-        await ctx.send('{} has sent {} messages in this server!'.format(ctx.message.guild.get_member(user_id).name, messages))
+        await ctx.send('{} has sent {} messages in this server!'.format(ctx.guild.get_member(user_id).name, messages))
     else:
         await ctx.send('This user has sent 0 messages in this server')
+
+
+@bot.command(name='love', help='Set the avatar of the bot')
+async def bot_name(ctx, user_to_show):
+    if user_to_show:
+        try:
+            user_id = strip_user_id(user_to_show)
+        except:
+            await ctx.send("You love yourself?")
+            return
+    else:
+        await ctx.send("You love yourself?")
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases:
+        love_phrases = guild_phrases.get('_love_phrases')
+        if love_phrases:
+            love_phrase = random.choice(love_phrases)
+            await ctx.send('<@!{}> loves <@!{}> {}'.format(ctx.message.author.id, user_id, love_phrase))
+        else:
+            await ctx.send('<@!{}> loves <@!{}> so fucking much! <3 <3'.format(ctx.message.author.id, user_id))
+    else:
+        await ctx.send('<@!{}> loves <@!{}> so fucking much! <3 <3'.format(ctx.message.author.id, user_id))
+
+
+@bot.command(name='add_love_phrase', help='Add a phrase to the love pool - Usage *add_love_phrase "add this whole thing"')
+async def add_love_phrase(ctx, phrase_to_add):
+    phrase_to_add = phrase_to_add.lower()
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases:
+        if phrase_to_add not in guild_phrases.get('_love_phrases'):
+            db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$push': {'_love_phrases': phrase_to_add}})
+        else:
+            await ctx.send("The phrase \"{}\" is already in the love phrases!".format(phrase_to_add))
+            return
+    else:
+        db.guildstats.insert_one({'_discord_guild_id': ctx.guild.id, '_love_phrases': [phrase_to_add]})
+    await ctx.send("Added: \"{}\" to the server's love phrases!".format(phrase_to_add))
+
+
+@bot.command(name='remove_love_phrase', help='Remove a phrase from the love pool - Usage *remove_love_phrase "remove this whole thing"')
+async def remove_love_phrase(ctx, phrase_to_remove):
+    phrase_to_remove = phrase_to_remove.lower()
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if guild_phrases and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
+        db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_love_phrases': phrase_to_remove}})
+        await ctx.send("Removed: \"{}\" from the server's love phrases!".format(phrase_to_remove))
+    else:
+        await ctx.send("This server has no love phrase \"{}\" to remove!".format(phrase_to_remove))
 
 
 @bot.event
@@ -226,9 +275,11 @@ def process_message(user_stats, message, insert=False):
         else:
             count_dict[guild_id + '._word_count.' + item] = 1
 
-    phrases = db.guildstats.find_one({'_discord_guild_id': message.guild.id})
-    if phrases:
-        phrases = phrases.get('_tracked_phrases')
+    guild_phrases = db.guildstats.find_one({'_discord_guild_id': message.guild.id})
+    if guild_phrases:
+        phrases = guild_phrases.get('_tracked_phrases')
+        if not phrases:
+            phrases = []
     else:
         phrases = []
 
