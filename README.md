@@ -3,8 +3,8 @@ Custom Discord bot mainly for tracking user statistics
 
 ## Requires 
 - discord.py
-- pymongo
-- dotenv
+- pymongo (2.9.5 if running mongo 2.4)
+- python-dotenv 
 - requests
 
 ## Setup
