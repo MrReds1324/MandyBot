@@ -1,5 +1,6 @@
 # bot.py
 import os
+import time
 import requests
 import random
 import logging
@@ -11,6 +12,7 @@ from pymongo import MongoClient
 from discord.ext import commands
 from discord import Embed, HTTPException
 
+time.sleep(45)
 load_dotenv()
 logger = logging.getLogger('discord')
 logger.setLevel(os.getenv('LOGGING_LEVEL'))
