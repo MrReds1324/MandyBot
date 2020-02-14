@@ -3,6 +3,7 @@ import os
 import requests
 import random
 import logging
+import datetime
 
 from discord.utils import find
 from dotenv import load_dotenv
@@ -22,7 +23,7 @@ client = MongoClient(os.getenv('MONGODB_URL'))
 db = client.mandybot
 
 command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
-                'message_count', 'love', 'add_love_phrase', 'remove_love_phrase', 'show_love_phrases']
+                'message_count', 'love', 'add_love_phrase', 'remove_love_phrase', 'show_love_phrases', 'diary', 'dear_diary', 'show_diary']
 prefixes = db.guildstats.find_one({'_name': '_mandybot_prefixes'}).get('_mandybot_prefixes')
 
 
@@ -186,14 +187,14 @@ async def bot_name(ctx, new_name):
 
 
 @bot.command(name='bot_pfp', help='Set the avatar of the bot')
-async def bot_name(ctx, image_url):
+async def bot_pfp(ctx, image_url):
     response = requests.get(image_url)
     image_bytes = response.content
     await bot.user.edit(avatar=image_bytes)
 
 
 @bot.command(name='message_count', help='Shows the total number of messages sent for a user')
-async def bot_name(ctx, user_to_show=None):
+async def message_count(ctx, user_to_show=None):
     guild_id = str(ctx.message.guild.id)
     if user_to_show:
         try:
@@ -212,7 +213,7 @@ async def bot_name(ctx, user_to_show=None):
 
 
 @bot.command(name='love', help='Show a user some love')
-async def bot_name(ctx, user_to_show):
+async def love(ctx, user_to_show):
     if user_to_show:
         try:
             user_id = strip_user_id(user_to_show)
@@ -268,6 +269,45 @@ async def show_love_phrases(ctx):
             await ctx.send(item)
     else:
         await ctx.send("This server has no love phrases!")
+
+
+@bot.command(name='diary', help='Shows a random diary entry')
+async def diary(ctx):
+    diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if diary_entries:
+        diary_entries = diary_entries.get('_diary_entries')
+        if diary_entries:
+            diary_entry = random.choice(diary_entries)
+            await ctx.send(diary_entry)
+        else:
+            await ctx.send('No diary entries!')
+    else:
+        await ctx.send('No diary entries!')
+
+
+@bot.command(name='dear_diary', help='Add an entry to the diary')
+async def dear_diary(ctx, entry_to_add):
+    diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    diary_start = '\nEntry Number {}, \n{}\nDear Diary,\n{}'
+    if diary_entries:
+        diary_entry = diary_start.format(len(diary_entries.get('_diary_entries', [])) + 1, datetime.datetime.today().strftime('%m-%d-%Y'), entry_to_add)
+        db.guildstats.update_one({'_discord_guild_id': diary_entries.get('_discord_guild_id')}, {'$push': {'_diary_entries': diary_entry}})
+    else:
+        diary_entry = diary_start.format(1, datetime.datetime.today().strftime('%m-%d-%Y'), entry_to_add)
+        db.guildstats.insert_one({'_discord_guild_id': ctx.guild.id, '_diary_entries': [diary_entry]})
+    await ctx.send('The following was added to the diary:{}'.format(diary_entry))
+
+
+@bot.command(name='show_diary', help='Show all diary entries')
+async def show_diary(ctx):
+    diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
+    if diary_entries and diary_entries.get('_diary_entries'):
+        string_list = format_list_to_printable_lists(diary_entries.get('_diary_entries'))
+        for item in string_list:
+            await ctx.send(item)
+    else:
+        await ctx.send('There are no diary entries yet!')
+
 
 @bot.event
 async def on_command_error(ctx, error):
