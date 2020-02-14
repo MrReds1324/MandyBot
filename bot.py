@@ -76,7 +76,7 @@ async def on_message(message):
 async def add_phrase(ctx, phrase_to_add):
     phrase_to_add = phrase_to_add.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases:
+    if guild_phrases and guild_phrases.get('_tracked_phrases'):
         if phrase_to_add not in guild_phrases.get('_tracked_phrases'):
             db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$push': {'_tracked_phrases': phrase_to_add}})
         else:
@@ -91,7 +91,7 @@ async def add_phrase(ctx, phrase_to_add):
 async def remove_phrase(ctx, phrase_to_remove):
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
+    if guild_phrases and guild_phrases.get('_tracked_phrases') and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
         db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_tracked_phrases': phrase_to_remove}})
         await ctx.send("Removed: \"{}\" from the server's tracked phrases!".format(phrase_to_remove))
     else:
@@ -225,13 +225,9 @@ async def love(ctx, user_to_show):
     else:
         await ctx.send("You love yourself <3")
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases:
-        love_phrases = guild_phrases.get('_love_phrases')
-        if love_phrases:
-            love_phrase = random.choice(love_phrases)
-            await ctx.send('<@!{}> loves <@!{}> {}'.format(ctx.message.author.id, user_id, love_phrase))
-        else:
-            await ctx.send('<@!{}> loves <@!{}> so fucking much! <3 <3'.format(ctx.message.author.id, user_id))
+    if guild_phrases and guild_phrases.get('_love_phrases'):
+        love_phrase = random.choice(guild_phrases.get('_love_phrases'))
+        await ctx.send('<@!{}> loves <@!{}> {}'.format(ctx.message.author.id, user_id, love_phrase))
     else:
         await ctx.send('<@!{}> loves <@!{}> so fucking much! <3 <3'.format(ctx.message.author.id, user_id))
 
@@ -240,7 +236,7 @@ async def love(ctx, user_to_show):
 async def add_love_phrase(ctx, phrase_to_add):
     phrase_to_add = phrase_to_add.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases:
+    if guild_phrases and guild_phrases.get('_love_phrases'):
         if phrase_to_add not in guild_phrases.get('_love_phrases'):
             db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$push': {'_love_phrases': phrase_to_add}})
         else:
@@ -255,7 +251,7 @@ async def add_love_phrase(ctx, phrase_to_add):
 async def remove_love_phrase(ctx, phrase_to_remove):
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases and phrase_to_remove not in guild_phrases.get('_love_phrases'):
+    if guild_phrases and guild_phrases.get('_love_phrases') and phrase_to_remove not in guild_phrases.get('_love_phrases'):
         db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_love_phrases': phrase_to_remove}})
         await ctx.send("Removed: \"{}\" from the server's love phrases!".format(phrase_to_remove))
     else:
@@ -276,13 +272,9 @@ async def show_love_phrases(ctx):
 @bot.command(name='diary', help='Shows a random diary entry')
 async def diary(ctx):
     diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if diary_entries:
-        diary_entries = diary_entries.get('_diary_entries')
-        if diary_entries:
-            diary_entry = random.choice(diary_entries)
-            await ctx.send(diary_entry)
-        else:
-            await ctx.send('No diary entries!')
+    if diary_entries and diary_entries.get('_diary_entries'):
+        diary_entry = random.choice(diary_entries.get('_diary_entries'))
+        await ctx.send(diary_entry)
     else:
         await ctx.send('No diary entries!')
 
@@ -319,6 +311,7 @@ async def on_command_error(ctx, error):
         ctx.send('You are changing the profile picture too quickly, please wait and try again!')
     else:
         await ctx.send('An error occurred! Please try again')
+        print(error)
         logger.error('{}: MESSAGE: {}'.format(error, ctx.message.content))
 
 
