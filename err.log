@@ -1,0 +1,2 @@
+2020-02-13 23:32:54,113:ERROR:discord: Command raised an exception: AttributeError: 'NoneType' object has no attribute 'keys': MESSAGE: ?phrase_count <@!133758605869580288>
+2020-02-13 23:35:34,979:ERROR:discord: Command raised an exception: AttributeError: 'NoneType' object has no attribute 'get': MESSAGE: *phrase_count <@!133798897989582848>

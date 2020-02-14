@@ -124,6 +124,8 @@ async def phrase_count(ctx, user_to_show=None, phrase_to_show=None):
     if user_stats:
         await ctx.send('{} has said:'.format(ctx.guild.get_member(user_id).name))
         phrases = user_stats.get(guild_id).get('_phrase_count')
+        if not phrases:
+            return
         if phrase_to_show:
             await ctx.send(phrase_to_show + ': ' + str(phrases.get(phrase_to_show, 0)))
         else:
@@ -148,6 +150,8 @@ async def word_count(ctx, user_to_show=None, word_to_show=None):
     if user_stats:
         await ctx.send('{} has said:'.format(ctx.guild.get_member(user_id).name))
         words = user_stats.get(guild_id).get('_word_count')
+        if not words:
+            return
         if word_to_show:
             await ctx.send(word_to_show + ': ' + str(words.get(word_to_show, 0)))
         else:
