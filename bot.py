@@ -145,7 +145,7 @@ async def word_count(ctx, user_to_show=None, word_to_show=None):
     else:
         user_id = ctx.message.author.id
     user_stats = db.userstats.find_one({'_discord_user_id': user_id})
-    if user_stats:
+    if user_stats and user_stats.get(guild_id):
         await ctx.send('{} has said:'.format(ctx.guild.get_member(user_id).name))
         words = user_stats.get(guild_id).get('_word_count')
         if not words:
