@@ -121,12 +121,10 @@ async def phrase_count(ctx, user_to_show=None, phrase_to_show=None):
     else:
         user_id = ctx.message.author.id
     user_stats = db.userstats.find_one({'_discord_user_id': user_id})
-    if user_stats:
+    if user_stats and user_stats.get(guild_id):
         await ctx.send('{} has said:'.format(ctx.guild.get_member(user_id).name))
         phrases = user_stats.get(guild_id).get('_phrase_count')
-        if not phrases:
-            return
-        if phrase_to_show:
+        if phrase_to_show and phrases:
             await ctx.send(phrase_to_show + ': ' + str(phrases.get(phrase_to_show, 0)))
         else:
             for string_item in format_dict_to_string(phrases):
