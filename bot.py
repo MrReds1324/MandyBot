@@ -360,11 +360,7 @@ def process_message(user_stats, message, insert=False):
 
 
 def strip_special_chars(str_item):
-    special_chars = ['.', '$']
-    if str_item and str_item[0] in special_chars:
-        return strip_special_chars(str_item[1:])
-    else:
-        return str_item
+    return ''.join(e for e in str_item if e.isalnum())
 
 
 def format_dict_to_string(dict_to_format):
