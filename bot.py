@@ -326,8 +326,7 @@ def process_message(user_stats, message, insert=False):
     count_dict = {guild_id + '._message_count': 1}
     for item in message_items:
         # Check for words that start with special mongodb characters and remove them
-        if item.startswith('.') or item.startswith('$'):
-            item = item[1:]
+        item = strip_special_chars(item)
         if count_dict.get(item):
             count_dict[guild_id + '._word_count.' + item] = int(count_dict.get(guild_id + '._word_count.' + item)) + 1
         else:
@@ -349,7 +348,16 @@ def process_message(user_stats, message, insert=False):
 
     if insert:
         db.userstats.insert_one({'_discord_user_id': user_stats.get('_discord_user_id')})
+        return
     db.userstats.update_one({'_discord_user_id': user_stats.get('_discord_user_id')}, {'$inc': count_dict})
+
+
+def strip_special_chars(str_item):
+    special_chars = ['.', '$']
+    if str_item and str_item[0] in special_chars:
+        return strip_special_chars(str_item[1:])
+    else:
+        return str_item
 
 
 def format_dict_to_string(dict_to_format):
