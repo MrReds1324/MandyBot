@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from discord.ext import commands
 from discord import Embed, HTTPException
 
-time.sleep(1)
+time.sleep(45)
 load_dotenv()
 logger = logging.getLogger('discord')
 logger.setLevel(os.getenv('LOGGING_LEVEL'))
@@ -76,12 +76,15 @@ async def on_message(message):
 async def add_phrase(ctx, phrase_to_add):
     phrase_to_add = phrase_to_add.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases and guild_phrases.get('_tracked_phrases'):
-        if phrase_to_add not in guild_phrases.get('_tracked_phrases'):
-            db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$push': {'_tracked_phrases': phrase_to_add}})
+    if guild_phrases:
+        if guild_phrases.get(''):
+            if phrase_to_add not in guild_phrases.get('_tracked_phrases'):
+                db.guildstats.update_one({'_discord_guild_id': ctx.guild.id}, {'$push': {'_tracked_phrases': phrase_to_add}})
+            else:
+                await ctx.send("The phrase \"{}\" is already being tracked!".format(phrase_to_add))
+                return
         else:
-            await ctx.send("The phrase \"{}\" is already being tracked!".format(phrase_to_add))
-            return
+            db.guildstats.update_one({'_discord_guild_id': ctx.guild.id}, {'$push': {'_tracked_phrases': phrase_to_add}})
     else:
         db.guildstats.insert_one({'_discord_guild_id': ctx.guild.id, '_tracked_phrases': [phrase_to_add]})
     await ctx.send("Added: \"{}\" to the server's tracked phrases!".format(phrase_to_add))
@@ -92,7 +95,7 @@ async def remove_phrase(ctx, phrase_to_remove):
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_tracked_phrases') and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
-        db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_tracked_phrases': phrase_to_remove}})
+        db.guildstats.update_one({'_discord_guild_id': ctx.guild.id}, {'$pull': {'_tracked_phrases': phrase_to_remove}})
         await ctx.send("Removed: \"{}\" from the server's tracked phrases!".format(phrase_to_remove))
     else:
         await ctx.send("This server has no phrase \"{}\" to remove!".format(phrase_to_remove))
@@ -238,12 +241,15 @@ async def love(ctx, user_to_show):
 async def add_love_phrase(ctx, phrase_to_add):
     phrase_to_add = phrase_to_add.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
-    if guild_phrases and guild_phrases.get('_love_phrases'):
-        if phrase_to_add not in guild_phrases.get('_love_phrases'):
-            db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$push': {'_love_phrases': phrase_to_add}})
+    if guild_phrases:
+        if guild_phrases.get('_love_phrases'):
+            if phrase_to_add not in guild_phrases.get('_love_phrases'):
+                db.guildstats.update_one({'_discord_guild_id': ctx.guild.id}, {'$push': {'_love_phrases': phrase_to_add}})
+            else:
+                await ctx.send("The phrase \"{}\" is already in the love phrases!".format(phrase_to_add))
+                return
         else:
-            await ctx.send("The phrase \"{}\" is already in the love phrases!".format(phrase_to_add))
-            return
+            db.guildstats.update_one({'_discord_guild_id': ctx.guild.id}, {'$push': {'_love_phrases': phrase_to_add}})
     else:
         db.guildstats.insert_one({'_discord_guild_id': ctx.guild.id, '_love_phrases': [phrase_to_add]})
     await ctx.send("Added: \"{}\" to the server's love phrases!".format(phrase_to_add))
@@ -254,7 +260,7 @@ async def remove_love_phrase(ctx, phrase_to_remove):
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_love_phrases') and phrase_to_remove not in guild_phrases.get('_love_phrases'):
-        db.guildstats.update_one({'_discord_guild_id': guild_phrases.get('_discord_guild_id')}, {'$pull': {'_love_phrases': phrase_to_remove}})
+        db.guildstats.update_one({'_discord_guild_id': ctx.guild.id}, {'$pull': {'_love_phrases': phrase_to_remove}})
         await ctx.send("Removed: \"{}\" from the server's love phrases!".format(phrase_to_remove))
     else:
         await ctx.send("This server has no love phrase \"{}\" to remove!".format(phrase_to_remove))
