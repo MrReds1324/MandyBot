@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from discord.ext import commands
 from discord import Embed, HTTPException
 
-time.sleep(45)
+time.sleep(1)
 load_dotenv()
 logger = logging.getLogger('discord')
 logger.setLevel(os.getenv('LOGGING_LEVEL'))
@@ -327,10 +327,11 @@ def process_message(user_stats, message, insert=False):
     for item in message_items:
         # Check for words that start with special mongodb characters and remove them
         item = strip_special_chars(item)
-        if count_dict.get(item):
-            count_dict[guild_id + '._word_count.' + item] = int(count_dict.get(guild_id + '._word_count.' + item)) + 1
-        else:
-            count_dict[guild_id + '._word_count.' + item] = 1
+        if item:
+            if count_dict.get(item):
+                count_dict[guild_id + '._word_count.' + item] = int(count_dict.get(guild_id + '._word_count.' + item)) + 1
+            else:
+                count_dict[guild_id + '._word_count.' + item] = 1
 
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': message.guild.id})
     if guild_phrases:
