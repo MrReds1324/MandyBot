@@ -1,16 +1,17 @@
 # bot.py
-import os
-import time
-import requests
-import random
-import logging
+import asyncio
 import datetime
+import logging
+import os
+import random
+import time
 
+import requests
+from discord import Embed, HTTPException
+from discord.ext import commands, tasks
 from discord.utils import find
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from discord.ext import commands
-from discord import Embed, HTTPException
 
 time.sleep(45)
 load_dotenv()
@@ -309,6 +310,21 @@ async def show_diary(ctx):
             await ctx.send(item)
     else:
         await ctx.send('There are no diary entries yet!')
+
+
+# Reminder message for medicine
+@tasks.loop(hours=24)
+async def scheduled_reminder():
+    message_channel = bot.get_channel(863916120855674921)
+    await message_channel.send("<@133758605869580288> take your medicine princess!")
+
+
+@scheduled_reminder.before_loop
+async def before_scheduled_reminder():
+    for _ in range(60*24):  # loop the whole day
+        if datetime.datetime.now().hour == 12:  # 24 hour format
+            return
+        await asyncio.sleep(60)
 
 
 @bot.event
