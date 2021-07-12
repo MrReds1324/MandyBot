@@ -409,4 +409,5 @@ def strip_user_id(mention_string):
     return int(mention_string[3:-1])
 
 
+scheduled_reminder.start()
 bot.run(token)
