@@ -322,7 +322,7 @@ async def scheduled_reminder():
 @scheduled_reminder.before_loop
 async def before_scheduled_reminder():
     for _ in range(60*24):  # loop the whole day
-        if datetime.datetime.now().hour == 12:  # 24 hour format
+        if datetime.datetime.now().hour == 9:  # 24 hour format
             return
         await asyncio.sleep(60)
 
