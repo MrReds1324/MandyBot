@@ -316,7 +316,7 @@ async def show_diary(ctx):
 @tasks.loop(hours=24)
 async def scheduled_reminder():
     message_channel = bot.get_channel(863916120855674921)
-    await message_channel.send("<@133758605869580288> take your medicine princess!")
+    await message_channel.send("<@991864524758061156> take your medicine princess!")
 
 
 @scheduled_reminder.before_loop
