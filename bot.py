@@ -314,15 +314,30 @@ async def show_diary(ctx):
 
 # Reminder message for medicine
 @tasks.loop(hours=24)
-async def scheduled_reminder():
+async def scheduled_reminder_med_1():
     message_channel = bot.get_channel(863916120855674921)
     await message_channel.send("<@991864524758061156> take your medicine princess!")
 
 
-@scheduled_reminder.before_loop
-async def before_scheduled_reminder():
+@scheduled_reminder_med_1.before_loop
+async def before_scheduled_reminder_1():
     for _ in range(60*24):  # loop the whole day
         if datetime.datetime.now().hour == 9:  # 24 hour format
+            return
+        await asyncio.sleep(60)
+
+# Reminder message for medicine
+@tasks.loop(hours=168)
+async def scheduled_reminder_med_2():
+    message_channel = bot.get_channel(863916120855674921)
+    await message_channel.send("<@991864524758061156> take your vitamin D medicine princess!")
+
+
+@scheduled_reminder_med_2.before_loop
+async def before_scheduled_reminder_2():
+    for _ in range(60*24*7):  # loop the whole week waiting for sunday
+        cur_date_time = datetime.datetime.now()
+        if cur_date_time.hour == 9 and cur_date_time.weekday() == 6:  # 24 hour format
             return
         await asyncio.sleep(60)
 
