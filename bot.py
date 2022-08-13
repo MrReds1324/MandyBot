@@ -424,5 +424,6 @@ def strip_user_id(mention_string):
     return int(mention_string[3:-1])
 
 
-scheduled_reminder.start()
+scheduled_reminder_med_1.start()
+scheduled_reminder_med_2.start()
 bot.run(token)
