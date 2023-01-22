@@ -11,12 +11,13 @@ from discord import Embed, HTTPException, Intents
 from discord.ext import commands, tasks
 from discord.utils import find
 from dotenv import load_dotenv
+
 try:
     from pymongo import MongoClient
 except ImportError:
     MongoClient = None
 
-time.sleep(45)
+time.sleep(15)
 load_dotenv()
 logger = logging.getLogger('discord')
 logger.setLevel(os.getenv('LOGGING_LEVEL'))
@@ -25,7 +26,6 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 token = os.getenv('DISCORD_TOKEN')
-
 
 command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
                 'message_count', 'love', 'add_love_phrase', 'remove_love_phrase', 'show_love_phrases', 'diary', 'dear_diary', 'show_diary']
@@ -369,18 +369,19 @@ async def show_diary(ctx):
 
 
 # Reminder message for medicine
-@tasks.loop(hours=24)
+@tasks.loop(seconds=10)
 async def scheduled_reminder_med_1():
     message_channel = bot.get_channel(863916120855674921)
     await message_channel.send("<@991864524758061156> take your medicine princess!")
 
 
-@scheduled_reminder_med_1.before_loop
-async def before_scheduled_reminder_1():
-    for _ in range(60*24):  # loop the whole day
-        if datetime.datetime.now().hour == 9:  # 24 hour format
-            return
-        await asyncio.sleep(60)
+# @scheduled_reminder_med_1.before_loop
+# async def before_scheduled_reminder_1():
+#     for _ in range(60 * 24):  # loop the whole day
+#         if datetime.datetime.now().hour == 9:  # 24 hour format
+#             return
+#         await asyncio.sleep(60)
+
 
 # Reminder message for medicine
 @tasks.loop(hours=168)
@@ -391,7 +392,7 @@ async def scheduled_reminder_med_2():
 
 @scheduled_reminder_med_2.before_loop
 async def before_scheduled_reminder_2():
-    for _ in range(60*24*7):  # loop the whole week waiting for sunday
+    for _ in range(60 * 24 * 7):  # loop the whole week waiting for sunday
         cur_date_time = datetime.datetime.now()
         if cur_date_time.hour == 9 and cur_date_time.weekday() == 6:  # 24 hour format
             return
@@ -483,6 +484,4 @@ def strip_user_id(mention_string):
     return int(mention_string[3:-1])
 
 
-scheduled_reminder_med_1.start()
-scheduled_reminder_med_2.start()
 bot.run(token)
