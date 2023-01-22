@@ -7,7 +7,7 @@ import random
 import time
 
 import requests
-from discord import Embed, HTTPException
+from discord import Embed, HTTPException, Intents
 from discord.ext import commands, tasks
 from discord.utils import find
 from dotenv import load_dotenv
@@ -44,7 +44,7 @@ def find_prefix(bot, message):
     return prefixes.get(server_id, '*')
 
 
-bot = commands.Bot(command_prefix=find_prefix)
+bot = commands.Bot(command_prefix=find_prefix, intents=Intents().all())
 
 
 @bot.event
