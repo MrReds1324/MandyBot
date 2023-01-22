@@ -44,7 +44,7 @@ def find_prefix(bot, message):
     return prefixes.get(server_id, '*')
 
 
-class MandyBot(Client):
+class MandyBot(commands.Bot):
     async def setup_hook(self):
         scheduled_reminder_med_1.start()
         scheduled_reminder_med_2.start()
