@@ -29,8 +29,9 @@ token = os.getenv('DISCORD_TOKEN')
 
 command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
                 'message_count', 'love', 'add_love_phrase', 'remove_love_phrase', 'show_love_phrases', 'diary', 'dear_diary', 'show_diary']
-prefixes = {}
 
+db = None
+prefixes = {}
 if MongoClient is not None:
     client = MongoClient(os.getenv('MONGODB_URL'))
     db = client.mandybot
@@ -375,7 +376,7 @@ async def show_diary(ctx):
 
 
 # Reminder message for medicine
-@tasks.loop(seconds=10)
+@tasks.loop(hours=24)
 async def scheduled_reminder_med_1():
     try:
         message_channel = bot.get_channel(863916120855674921)
@@ -383,12 +384,13 @@ async def scheduled_reminder_med_1():
     except Exception:
         pass
 
-# @scheduled_reminder_med_1.before_loop
-# async def before_scheduled_reminder_1():
-#     for _ in range(60 * 24):  # loop the whole day
-#         if datetime.datetime.now().hour == 9:  # 24 hour format
-#             return
-#         await asyncio.sleep(60)
+
+@scheduled_reminder_med_1.before_loop
+async def before_scheduled_reminder_1():
+    for _ in range(60 * 24):  # loop the whole day
+        if datetime.datetime.now().hour == 9:  # 24 hour format
+            return
+        await asyncio.sleep(60)
 
 
 # Reminder message for medicine
@@ -399,6 +401,7 @@ async def scheduled_reminder_med_2():
         await message_channel.send("<@991864524758061156> take your vitamin D medicine princess!")
     except Exception:
         pass
+
 
 @scheduled_reminder_med_2.before_loop
 async def before_scheduled_reminder_2():
