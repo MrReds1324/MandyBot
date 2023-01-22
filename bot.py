@@ -11,7 +11,10 @@ from discord import Embed, HTTPException
 from discord.ext import commands, tasks
 from discord.utils import find
 from dotenv import load_dotenv
-from pymongo import MongoClient
+try:
+    from pymongo import MongoClient
+except ImportError:
+    MongoClient = None
 
 time.sleep(45)
 load_dotenv()
@@ -22,15 +25,21 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 token = os.getenv('DISCORD_TOKEN')
-client = MongoClient(os.getenv('MONGODB_URL'))
-db = client.mandybot
+
 
 command_list = ['help', 'add_phrase', 'remove_phrase', 'show_phrases', 'phrase_count', 'word_count', 'update_prefix', 'show_pfp', 'bot_name', 'bot_pfp',
                 'message_count', 'love', 'add_love_phrase', 'remove_love_phrase', 'show_love_phrases', 'diary', 'dear_diary', 'show_diary']
-prefixes = db.guildstats.find_one({'_name': '_mandybot_prefixes'}).get('_mandybot_prefixes')
+prefixes = {}
+
+if MongoClient is not None:
+    client = MongoClient(os.getenv('MONGODB_URL'))
+    db = client.mandybot
+    prefixes = db.guildstats.find_one({'_name': '_mandybot_prefixes'}).get('_mandybot_prefixes')
 
 
 def find_prefix(bot, message):
+    if not prefixes:
+        return '*'
     server_id = str(message.guild.id)
     return prefixes.get(server_id, '*')
 
@@ -56,6 +65,10 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_message(message):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
+
     # Dont track the bots messages or let the bot issue commands
     if message.author == bot.user:
         return
@@ -75,6 +88,10 @@ async def on_message(message):
 
 @bot.command(name='add_phrase', help='Add a phrase to be tracked by the bot - Usage *add_phrase "add this whole thing"')
 async def add_phrase(ctx, phrase_to_add):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
+
     phrase_to_add = phrase_to_add.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases:
@@ -93,6 +110,9 @@ async def add_phrase(ctx, phrase_to_add):
 
 @bot.command(name='remove_phrase', help='Remove a phrase tracked by the bot - Usage *remove_phrase "remove this whole thing"')
 async def remove_phrase(ctx, phrase_to_remove):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_tracked_phrases') and phrase_to_remove not in guild_phrases.get('_tracked_phrases'):
@@ -104,6 +124,9 @@ async def remove_phrase(ctx, phrase_to_remove):
 
 @bot.command(name='show_phrases', help='Show this server\'s tracked phrases')
 async def show_phrases(ctx):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_tracked_phrases'):
         string_list = format_list_to_printable_lists(guild_phrases.get('_tracked_phrases'))
@@ -115,6 +138,9 @@ async def show_phrases(ctx):
 
 @bot.command(name='phrase_count', help='Show users phrase usage, both arguments are optional - Usage *phrase_count @user "phrase to show"')
 async def phrase_count(ctx, user_to_show=None, phrase_to_show=None):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     guild_id = str(ctx.message.guild.id)
     if user_to_show:
         try:
@@ -139,6 +165,9 @@ async def phrase_count(ctx, user_to_show=None, phrase_to_show=None):
 
 @bot.command(name='word_count', help='Show users word usage, both arguments are optional - Usage *phrase_count @user "phrase to show"')
 async def word_count(ctx, user_to_show=None, word_to_show=None):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     guild_id = str(ctx.message.guild.id)
     if user_to_show:
         try:
@@ -165,6 +194,9 @@ async def word_count(ctx, user_to_show=None, word_to_show=None):
 
 @bot.command(name='update_prefix', help='Change the prefix of the bot')
 async def update_prefix(ctx, new_prefix):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     db.guildstats.update_one({'_name': '_mandybot_prefixes'}, {'$set': {'_mandybot_prefixes.' + str(ctx.guild.id): new_prefix}})
     prefixes[str(ctx.guild.id)] = new_prefix
     await ctx.send("Prefix updated to {}".format(new_prefix))
@@ -203,6 +235,9 @@ async def bot_pfp(ctx, image_url):
 
 @bot.command(name='message_count', help='Shows the total number of messages sent for a user')
 async def message_count(ctx, user_to_show=None):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     guild_id = str(ctx.message.guild.id)
     if user_to_show:
         try:
@@ -222,6 +257,9 @@ async def message_count(ctx, user_to_show=None):
 
 @bot.command(name='love', help='Show a user some love')
 async def love(ctx, user_to_show):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     if user_to_show:
         try:
             user_id = strip_user_id(user_to_show)
@@ -240,6 +278,9 @@ async def love(ctx, user_to_show):
 
 @bot.command(name='add_love_phrase', help='Add a phrase to the love pool - Usage *add_love_phrase "add this whole thing"')
 async def add_love_phrase(ctx, phrase_to_add):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     phrase_to_add = phrase_to_add.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases:
@@ -258,6 +299,9 @@ async def add_love_phrase(ctx, phrase_to_add):
 
 @bot.command(name='remove_love_phrase', help='Remove a phrase from the love pool - Usage *remove_love_phrase "remove this whole thing"')
 async def remove_love_phrase(ctx, phrase_to_remove):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     phrase_to_remove = phrase_to_remove.lower()
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_love_phrases') and phrase_to_remove not in guild_phrases.get('_love_phrases'):
@@ -269,6 +313,9 @@ async def remove_love_phrase(ctx, phrase_to_remove):
 
 @bot.command(name='show_love_phrases', help='Show this server\'s love phrases')
 async def show_love_phrases(ctx):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     guild_phrases = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if guild_phrases and guild_phrases.get('_love_phrases'):
         string_list = format_list_to_printable_lists(guild_phrases.get('_love_phrases'))
@@ -280,6 +327,9 @@ async def show_love_phrases(ctx):
 
 @bot.command(name='diary', help='Shows a random diary entry')
 async def diary(ctx):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if diary_entries and diary_entries.get('_diary_entries'):
         diary_entry = random.choice(diary_entries.get('_diary_entries'))
@@ -290,6 +340,9 @@ async def diary(ctx):
 
 @bot.command(name='dear_diary', help='Add an entry to the diary')
 async def dear_diary(ctx, entry_to_add):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     diary_start = '\nEntry Number {}, \n{}\nDear Diary,\n{}'
     if diary_entries:
@@ -303,6 +356,9 @@ async def dear_diary(ctx, entry_to_add):
 
 @bot.command(name='show_diary', help='Show all diary entries')
 async def show_diary(ctx):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     diary_entries = db.guildstats.find_one({'_discord_guild_id': ctx.guild.id})
     if diary_entries and diary_entries.get('_diary_entries'):
         string_list = format_list_to_printable_lists(diary_entries.get('_diary_entries'))
@@ -355,6 +411,9 @@ async def on_command_error(ctx, error):
 
 
 def process_message(user_stats, message, insert=False):
+    # Cant track if no mongodb connection
+    if db is None:
+        return
     if not message.content:
         return
     content = message.content.lower()
