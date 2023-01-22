@@ -377,9 +377,11 @@ async def show_diary(ctx):
 # Reminder message for medicine
 @tasks.loop(seconds=10)
 async def scheduled_reminder_med_1():
-    message_channel = bot.get_channel(863916120855674921)
-    await message_channel.send("<@991864524758061156> take your medicine princess!")
-
+    try:
+        message_channel = bot.get_channel(863916120855674921)
+        await message_channel.send("<@991864524758061156> take your medicine princess!")
+    except Exception:
+        pass
 
 # @scheduled_reminder_med_1.before_loop
 # async def before_scheduled_reminder_1():
@@ -392,9 +394,11 @@ async def scheduled_reminder_med_1():
 # Reminder message for medicine
 @tasks.loop(hours=168)
 async def scheduled_reminder_med_2():
-    message_channel = bot.get_channel(863916120855674921)
-    await message_channel.send("<@991864524758061156> take your vitamin D medicine princess!")
-
+    try:
+        message_channel = bot.get_channel(863916120855674921)
+        await message_channel.send("<@991864524758061156> take your vitamin D medicine princess!")
+    except Exception:
+        pass
 
 @scheduled_reminder_med_2.before_loop
 async def before_scheduled_reminder_2():
