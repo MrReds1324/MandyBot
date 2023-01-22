@@ -7,7 +7,7 @@ import random
 import time
 
 import requests
-from discord import Embed, HTTPException, Intents
+from discord import Embed, HTTPException, Intents, Client
 from discord.ext import commands, tasks
 from discord.utils import find
 from dotenv import load_dotenv
@@ -44,7 +44,13 @@ def find_prefix(bot, message):
     return prefixes.get(server_id, '*')
 
 
-bot = commands.Bot(command_prefix=find_prefix, intents=Intents().all())
+class MandyBot(Client):
+    async def setup_hook(self):
+        scheduled_reminder_med_1.start()
+        scheduled_reminder_med_2.start()
+
+
+bot = MandyBot(command_prefix=find_prefix, intents=Intents().all())
 
 
 @bot.event
